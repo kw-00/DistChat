@@ -2,9 +2,9 @@ namespace DistChat.Node.Infrastructure.EventManagement;
 
 public interface IEventManager
 {
-    Task PublishAsync<TEvent>(TEvent @event) where TEvent : Event;
+    Task PublishAsync(Event @event);
 
-    Task SubscribeAsync(string connectionId, Guid roomId, string topic);
+    Task SubscribeAsync(string connectionId, EventAddress eventAddress);
 
-    Task UnsubscribeAsync(string connectionId, Guid roomId, string topic);
+    Task UnsubscribeAsync(string connectionId, EventAddress eventAddress);
 }

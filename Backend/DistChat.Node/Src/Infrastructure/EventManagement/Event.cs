@@ -1,13 +1,15 @@
 namespace DistChat.Node.Infrastructure.EventManagement;
 
-public abstract class Event
+public class Event
 {
-    public Guid RoomId { get; init; }
-    public string Topic => GetType().Name[0..^5];
-    public string Address => GetAddress(RoomId, Topic);
+    public EventAddress Address { get; }
 
-    public required EventPayload Payload { get; init; }
+    public object? Data { get; }
 
-    public static string GetAddress(Guid roomId, string topic) => $"{roomId}.{topic}";
+    public Event(EventAddress address, object? data)
+    {
+        Address = address;
+        Data = data;
+    }
 }
 

@@ -31,16 +31,16 @@ public class EventManager : IEventManager
     }
 
 
-    public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : Event
+    public async Task PublishAsync(Event @event)
     {
-        var channel = RedisChannel.Literal(@event.Address);
+        var channel = RedisChannel.Literal(@event.Address.Serialize());
         var message = JsonSerializer.Serialize(@event, _jsonOptions);
         await _subscriber.PublishAsync(channel, message);
     }
 
-    public async Task SubscribeAsync(string connectionId, Guid roomId, string topic)
+    public async Task SubscribeAsync(string connectionId, EventAddress eventAddress)
     { 
-        var address = Event.GetAddress(roomId, topic);
+        var address = eventAddress.Serialize();
         await _hubContext.Groups.AddToGroupAsync(connectionId, address);
         lock (_subscriptionCounter.GetLock(address))
         {
@@ -49,9 +49,9 @@ public class EventManager : IEventManager
         }
     }
 
-    public async Task UnsubscribeAsync(string connectionId, Guid roomId, string topic)
+    public async Task UnsubscribeAsync(string connectionId, EventAddress eventAddress)
     {
-        var address = Event.GetAddress(roomId, topic);
+        var address = eventAddress.Serialize();
         await _hubContext.Groups.RemoveFromGroupAsync(connectionId, address);
         lock (_subscriptionCounter.GetLock(address))
         {
@@ -64,6 +64,6 @@ public class EventManager : IEventManager
     {
         var json = value.ToString();
         var evt = JsonSerializer.Deserialize<Event>(json, _jsonOptions)!;
-        _hubContext.Clients.Group(evt.Address).SendAsync(evt.Topic, evt);
+        _hubContext.Clients.Group(evt.Address.Serialize()).SendAsync(evt.Address.Topic, evt);
     }
 }
