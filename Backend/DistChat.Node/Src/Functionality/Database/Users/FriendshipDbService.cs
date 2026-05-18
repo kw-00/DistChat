@@ -40,7 +40,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
         }
         catch (PostgresException pgEx)
         {
-            Exception reThrow = pgEx.ConstraintName switch
+            Exception toThrow = pgEx.ConstraintName switch
             {
                 FriendRequestTable.Constraints.PrimaryKey => 
                     new RedundantFriendRequestException(requestingUserId, targetUserId),
@@ -50,7 +50,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
                     new UserNotFoundException(targetUserId),
                 _ => pgEx
             };
-            throw reThrow;
+            throw toThrow;
         }
     }
 
@@ -95,7 +95,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
         }
         catch (PostgresException pgEx)
         {
-            Exception reThrow = pgEx.ConstraintName switch
+            Exception toThrow = pgEx.ConstraintName switch
             {
                 FriendshipTable.Constraints.PrimaryKey
                     => new AlreadyFriendsException(acceptingUserId, requestingUserId),
@@ -109,7 +109,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
                     ),
                 _ => pgEx
             };
-            throw reThrow;
+            throw toThrow;
         }
     }
 
@@ -151,6 +151,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
             WHERE 
                 {FriendRequestTable.Columns.RequestingUserId} = @requestingUserId
                 AND {FriendRequestTable.Columns.TargetUserId} = @decliningUserId
+            ;
             ",
             new
             {
@@ -170,7 +171,8 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
                 AND {FriendshipTable.Columns.FriendId} = @friendUserId
                 OR
                 {FriendshipTable.Columns.UserId} = @friendUserId
-                AND {FriendshipTable.Columns.FriendId} = @initiatingUserId  
+                AND {FriendshipTable.Columns.FriendId} = @initiatingUserId
+            ;
             ",
             new
             {

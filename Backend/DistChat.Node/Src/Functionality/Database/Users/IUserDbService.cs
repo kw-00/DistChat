@@ -4,7 +4,7 @@ namespace DistChat.Node.Functionality.Database.Users;
 
 public interface IUserDbService
 {
-    Task<User> CreateAsync(string name, string email, string passwordHash);
+    Task<User> CreateAsync(string login, string email, string passwordHash);
 
     Task<User?> GetAsync(Guid id);
 

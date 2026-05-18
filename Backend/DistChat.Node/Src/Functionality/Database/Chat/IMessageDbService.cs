@@ -5,6 +5,10 @@ public interface IMessageDbService
     Task<Message> CreateAsync(Guid userId, Guid roomId, string content);
 
     Task<IReadOnlyList<Message>> GetMessagesAsync(
-        Guid roomId, int limit, Guid? before = null, Guid? after = null
+        Guid roomId, 
+        int limit, 
+        Guid? before = null, 
+        Guid? after = null, 
+        bool newerFirst = false
     );
 }
