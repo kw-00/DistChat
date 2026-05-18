@@ -6,7 +6,7 @@ public interface IFriendshipDbService
 {
     Task RequestFriendshipAsync(Guid requestingUserId, Guid targetUserId);
 
-    Task<PublicUserDTO> AcceptFriendshipAsync(Guid acceptingUserId, Guid requestingUserId);
+    Task AcceptFriendshipAsync(Guid acceptingUserId, Guid requestingUserId);
 
     Task<IReadOnlyList<PublicUserDTO>> GetFriendsAsync(Guid userId);
 

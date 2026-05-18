@@ -4,7 +4,7 @@ public interface IEventManager
 {
     Task PublishAsync(Event @event);
 
-    Task SubscribeAsync(string connectionId, EventAddress eventAddress);
+    Task StartConsumptionAsync(string connectionId, EventAddress eventAddress);
 
-    Task UnsubscribeAsync(string connectionId, EventAddress eventAddress);
+    Task StopConsumptionAsync(string connectionId, EventAddress eventAddress);
 }

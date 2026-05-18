@@ -10,7 +10,7 @@ public class Membership
     {
         UserId = userId;
         RoomId = roomId;
-        Role = role.ToLower()switch
+        Role = role.ToLower() switch
         {
             "elder" => Role.Elder,
             "owner" => Role.Owner,

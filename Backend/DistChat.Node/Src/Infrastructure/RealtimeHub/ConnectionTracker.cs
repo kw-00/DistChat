@@ -9,21 +9,21 @@ public class ConnectionTracker
 {
     public event Func<TrackedConnectionInfo, Task>? UserConnected;
     public event Func<TrackedConnectionInfo, Task>? UserDisconnected;
-    private readonly ConcurrentDictionary<string, Guid> _connectionos = new();
+    private readonly ConcurrentDictionary<string, Guid> _connections = new();
 
     public Guid GetUserId(string connectionId)
-        => _connectionos[connectionId];
+        => _connections[connectionId];
 
 
     public Guid? TryGetUserId(string connectionId)
-        =>_connectionos.TryGetValue(connectionId, out var userId) ? userId : null;
+        =>_connections.TryGetValue(connectionId, out var userId) ? userId : null;
     
 
     public Guid Put(string connectionId, Guid userId)
-        => _connectionos.AddOrUpdate(connectionId, userId, (k, v) => userId);
+        => _connections.AddOrUpdate(connectionId, userId, (k, v) => userId);
 
     public void Remove(string connectionId) 
-        => _connectionos.TryRemove(connectionId, out _);
+        => _connections.TryRemove(connectionId, out _);
 
     public async Task InvokeUserConnectedAsync(string connectionId)
     {
@@ -40,7 +40,7 @@ public class ConnectionTracker
     {
         try
         {
-            var userId = _connectionos[connectionId];
+            var userId = _connections[connectionId];
             var connectionInfo = new TrackedConnectionInfo(connectionId, userId);
             if (hook is null) return;
             var tasks = new Task[hook.GetInvocationList().Length];

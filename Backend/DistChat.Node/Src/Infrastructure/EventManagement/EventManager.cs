@@ -1,29 +1,33 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using StackExchange.Redis;
+using NATS.Net;
 
 namespace DistChat.Node.Infrastructure.EventManagement;
 
 public class EventManager : IEventManager
 {
     private readonly IHubContext _hubContext;
-    private readonly ISubscriber _subscriber;
-
-    private readonly SubscriptionCounter _subscriptionCounter;
+    private readonly NatsClient _nats;
+    private readonly ILogger<EventManager> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
 
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> 
+        _subCancellation = new();
+
+    private readonly ConcurrentDictionary<string, Lock> _subCancellationLocks = new();
+
     public EventManager(
         IHubContext hubContext,
-        SubscriptionCounter subscriptionCounter,
-        IConnectionMultiplexer redis,
+        NatsClient nats,
+        ILogger<EventManager> logger,
         JsonSerializerOptions? jsonOptions = null
     )
     {
         _hubContext = hubContext;
-        _subscriber = redis.GetSubscriber();
-        _subscriptionCounter = subscriptionCounter;
+        _nats = nats;
+        _logger = logger;
         _jsonOptions = jsonOptions ?? new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -33,37 +37,67 @@ public class EventManager : IEventManager
 
     public async Task PublishAsync(Event @event)
     {
-        var channel = RedisChannel.Literal(@event.Address.Serialize());
+        var channel = @event.Address.Serialize();
         var message = JsonSerializer.Serialize(@event, _jsonOptions);
-        await _subscriber.PublishAsync(channel, message);
+        await _nats.PublishAsync(channel, message);
     }
 
-    public async Task SubscribeAsync(string connectionId, EventAddress eventAddress)
+    public Task StartConsumptionAsync(string connectionId, EventAddress eventAddress)
     { 
         var address = eventAddress.Serialize();
-        await _hubContext.Groups.AddToGroupAsync(connectionId, address);
-        lock (_subscriptionCounter.GetLock(address))
+        var subscriptionId = CreateSubscriptionId(connectionId, eventAddress);
+        var cancellation = new CancellationTokenSource();
+
+
+        async Task listen()
         {
-            if (_subscriptionCounter.TryIncrement(address)) return;
-            _subscriber.Subscribe(RedisChannel.Literal(address), OnRedisEvent);
+            await foreach (
+                var message in _nats
+                    .SubscribeAsync<string>(address)
+                    .WithCancellation(cancellation.Token)
+            )
+            {
+                var data = message.Data;
+                if (data is null)
+                {
+                    _logger.LogError("NATS message is unexpectedly null.");
+                    continue;
+                }
+                var evt = JsonSerializer.Deserialize<Event>(data, _jsonOptions);
+                if (evt is null) 
+                {
+                    _logger.LogError("NATS message was not deserialized successfully.");
+                    continue;
+                }
+                await _hubContext.Clients.Client(connectionId).SendAsync(
+                    evt.Address.Topic,
+                    evt.Data
+                );
+            }
+        }
+
+        lock (_subCancellationLocks[subscriptionId])
+        {
+            _subCancellation[subscriptionId] = cancellation;
+            _ = listen();
+            return Task.CompletedTask;
         }
     }
 
-    public async Task UnsubscribeAsync(string connectionId, EventAddress eventAddress)
+    public async Task StopConsumptionAsync(string connectionId, EventAddress eventAddress)
     {
-        var address = eventAddress.Serialize();
-        await _hubContext.Groups.RemoveFromGroupAsync(connectionId, address);
-        lock (_subscriptionCounter.GetLock(address))
+        var subId = CreateSubscriptionId(connectionId, eventAddress);
+        CancellationTokenSource? cancellation;
+        lock (_subCancellationLocks[subId])
         {
-            if (_subscriptionCounter.TryDecrement(address)) return;
-            _subscriber.Unsubscribe(RedisChannel.Literal(address), OnRedisEvent);
+            _subCancellation.TryRemove(subId, out cancellation);
+            _subCancellationLocks.TryRemove(subId, out _);
         }
+        if (cancellation is null) return;
+        await cancellation.CancelAsync();
     }
 
-    private void OnRedisEvent(RedisChannel channel, RedisValue value)
-    {
-        var json = value.ToString();
-        var evt = JsonSerializer.Deserialize<Event>(json, _jsonOptions)!;
-        _hubContext.Clients.Group(evt.Address.Serialize()).SendAsync(evt.Address.Topic, evt);
-    }
+    private string CreateSubscriptionId(string connectionId, EventAddress eventAddress)
+        => JsonSerializer.Serialize(new { connectionId, eventAddress });
+    
 }

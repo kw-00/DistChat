@@ -11,16 +11,16 @@ public class TopicManager<TData>(IEventManager eventManager, string topic) : ITo
         );
     }
 
-    public async Task SubscribeAsync(string connectionId, Guid listenerGroupId)
+    public async Task StartConsumptionAsync(string connectionId, Guid listenerGroupId)
     {
-        await eventManager.SubscribeAsync(
+        await eventManager.StartConsumptionAsync(
             connectionId, new EventAddress(listenerGroupId, topic)
         );
     }
 
-    public async Task UnsubscribeAsync(string connectionId, Guid listenerGroupId)
+    public async Task StopConsumptionAsync(string connectionId, Guid listenerGroupId)
     {
-        await eventManager.UnsubscribeAsync(
+        await eventManager.StopConsumptionAsync(
             connectionId, new EventAddress(listenerGroupId, topic)
         );
     }

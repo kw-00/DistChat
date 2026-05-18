@@ -2,5 +2,9 @@ using DistChat.Node.Exceptions;
 
 namespace DistChat.Node.Functionality.Database.Users;
 
-public class UserNotFoundException(Guid id) 
-    : DistChatException($"User with id of \"{id}\" not found.");
+public class UserNotFoundException : DistChatException
+{
+    public UserNotFoundException(Guid id) : base($"User with id of \"{id}\" not found.") { }
+    public UserNotFoundException(string message) : base(message) { }
+}
+

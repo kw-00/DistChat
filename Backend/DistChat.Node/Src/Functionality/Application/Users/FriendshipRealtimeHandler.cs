@@ -47,13 +47,13 @@ public class FriendshipRealtimeHandler
         connectionTracker.UserConnected += async (conn) =>
         {
             foreach (var topicManager in topicManagers)
-                await topicManager.SubscribeAsync(conn.ConnectionId, conn.UserId);
+                await topicManager.StartConsumptionAsync(conn.ConnectionId, conn.UserId);
         };
 
         connectionTracker.UserDisconnected += async (conn) =>
         {
             foreach (var topicManager in topicManagers)
-                await topicManager.UnsubscribeAsync(conn.ConnectionId, conn.UserId);
+                await topicManager.StopConsumptionAsync(conn.ConnectionId, conn.UserId);
         };
 
         dispatcher.RegisterGroup("friendship", group);

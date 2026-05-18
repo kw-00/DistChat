@@ -2,6 +2,6 @@ namespace DistChat.Node.Infrastructure.EventManagement;
 
 public interface ITopicManager
 {
-    Task SubscribeAsync(string connectionId, Guid listenerGroup);
-    Task UnsubscribeAsync(string connectionId, Guid listenerGroup);
+    Task StartConsumptionAsync(string connectionId, Guid listenerGroup);
+    Task StopConsumptionAsync(string connectionId, Guid listenerGroup);
 }

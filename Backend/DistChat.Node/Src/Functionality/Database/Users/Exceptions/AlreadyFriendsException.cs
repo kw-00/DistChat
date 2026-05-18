@@ -2,8 +2,8 @@ using DistChat.Node.Exceptions;
 
 namespace DistChat.Node.Functionality.Database.Users;
 
-public class AlreadyFriendsException(Guid requesterUserId, Guid targetUserId)
+public class AlreadyFriendsException(Guid acceptingUserId, Guid requestingUserId)
     : DistChatException(
-        $"Users with IDs of \"{requesterUserId}\"" 
-        + $" and \"{targetUserId}\" are already friends."
+        $"Users with IDs of \"{requestingUserId}\"" 
+        + $" and \"{acceptingUserId}\" are already friends."
     );
