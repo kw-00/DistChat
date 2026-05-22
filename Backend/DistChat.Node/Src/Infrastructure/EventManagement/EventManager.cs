@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using DistChat.Node.Infrastructure.Concurrency;
 using Microsoft.AspNetCore.SignalR;
 using NATS.Net;
 
@@ -16,7 +17,7 @@ public class EventManager : IEventManager
     private readonly ConcurrentDictionary<string, CancellationTokenSource> 
         _subCancellation = new();
 
-    private readonly ConcurrentDictionary<string, Lock> _subCancellationLocks = new();
+    private readonly PartitionedLock<string> _subCancellationLocks = new(10000);
 
     public EventManager(
         IHubContext hubContext,
@@ -44,12 +45,11 @@ public class EventManager : IEventManager
 
     public Task StartConsumptionAsync(string connectionId, EventAddress eventAddress)
     { 
-        var address = eventAddress.Serialize();
         var subscriptionId = CreateSubscriptionId(connectionId, eventAddress);
         var cancellation = new CancellationTokenSource();
+        var address = eventAddress.Serialize();
 
-
-        async Task listen()
+        async Task Listen()
         {
             await foreach (
                 var message in _nats
@@ -76,10 +76,13 @@ public class EventManager : IEventManager
             }
         }
 
-        lock (_subCancellationLocks[subscriptionId])
+        lock (_subCancellationLocks.Get(subscriptionId))
         {
+            if (_subCancellation.ContainsKey(subscriptionId)) 
+                return Task.CompletedTask;
+
             _subCancellation[subscriptionId] = cancellation;
-            _ = listen();
+            _ = Listen();
             return Task.CompletedTask;
         }
     }
@@ -88,10 +91,9 @@ public class EventManager : IEventManager
     {
         var subId = CreateSubscriptionId(connectionId, eventAddress);
         CancellationTokenSource? cancellation;
-        lock (_subCancellationLocks[subId])
+        lock (_subCancellationLocks.Get(subId))
         {
             _subCancellation.TryRemove(subId, out cancellation);
-            _subCancellationLocks.TryRemove(subId, out _);
         }
         if (cancellation is null) return;
         await cancellation.CancelAsync();

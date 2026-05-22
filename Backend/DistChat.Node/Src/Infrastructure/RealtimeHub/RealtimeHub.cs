@@ -4,7 +4,7 @@ namespace DistChat.Node.Infrastructure.RealtimeHub;
 
 public class RealtimeHub(
     CommandDispatcher dispatcher,
-    ConnectionTracker connectionTracker
+    UserConnectionTracker connectionTracker
 ) : Hub
 {
 
@@ -20,8 +20,16 @@ public class RealtimeHub(
 
     public override async Task OnConnectedAsync()
     {
-        await connectionTracker.InvokeUserConnectedAsync(Context.ConnectionId);
-        await base.OnConnectedAsync();
+        try
+        {
+            await connectionTracker.InvokeUserConnectedAsync(Context.ConnectionId);
+            await base.OnConnectedAsync();
+        }
+        catch (Exception)
+        {
+            Context.Abort();
+            throw;
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

@@ -1,6 +1,6 @@
 using DistChat.Node.Exceptions;
 
-namespace DistChat.Node.Functionality.Database.Users;
+namespace DistChat.Node.Functionality.Exceptions.Users;
 
 public class RedundantFriendRequestException(Guid requestingUserId, Guid targetUserId)
     : DistChatException(

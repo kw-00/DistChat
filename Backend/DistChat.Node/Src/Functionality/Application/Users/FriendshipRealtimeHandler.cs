@@ -1,6 +1,3 @@
-using DistChat.Node.Functionality.Database.Users;
-using DistChat.Node.Functionality.DTOs.Users;
-using DistChat.Node.Infrastructure.EventManagement;
 using DistChat.Node.Infrastructure.RealtimeHub;
 
 namespace DistChat.Node.Functionality.Application.Users;
@@ -9,54 +6,91 @@ public class FriendshipRealtimeHandler
 {
     public FriendshipRealtimeHandler(
         CommandDispatcher dispatcher,
-        ConnectionTracker connectionTracker,
-        IFriendshipDbService friendshipDbService,
-        IUserDbService userDbService,
-        FriendshipRequestedTopicManager friendshipRequestedTopicManger,
-        NewFriendTopicManager newFriendTopicManager,
-        UnfriendedTopicManager unfriendedTopicManager
-
-    ) 
+        UserConnectionTracker connectionTracker,
+        FriendshipOperations operations
+    )
     {
         var group = new CommandGroup();
+
         group.RegisterCommand("requestFriendship", async (invocation) =>
         {
-            throw new NotImplementedException();
+            bool targetUserIdIsValid = Guid.TryParse(
+                invocation.Args[0].ToString() ?? "", out var targetUserId
+            );
+            if (!targetUserIdIsValid)
+                throw new InvalidCommandInvocationException(
+                    "Target user ID is not a valid Guid."
+                );
+
+            await operations.RequestFriendshipAsync(
+                invocation.ConnectionId,
+                targetUserId
+            );
         });
 
         group.RegisterCommand("acceptFriendship", async (invocation) =>
         {
-            throw new NotImplementedException();
+            bool requestingUserIdIsValid = Guid.TryParse(
+                invocation.Args[0].ToString() ?? "", out var requestingUserId
+            );
+            if (!requestingUserIdIsValid)
+                throw new InvalidCommandInvocationException(
+                    "Requesting user ID is not a valid Guid."
+                );
+
+            await operations.AcceptFriendshipAsync(
+                invocation.ConnectionId,
+                requestingUserId
+            );
         });
 
-        group.RegisterCommand("declineFriendship", async (invocation) =>
+        group.RegisterCommand("rejectFriendship", async (invocation) =>
         {
-            throw new NotImplementedException();
+            var requesterIdIsValid = Guid.TryParse(
+                invocation.Args[0].ToString() ?? "", out var requestingUserId
+            );
+            if (!requesterIdIsValid)
+                throw new InvalidCommandInvocationException(
+                    "Requesting user ID is not a valid Guid."
+                );
+
+            await operations.RejectFriendshipAsync(
+                invocation.ConnectionId,
+                requestingUserId
+            );
         });
 
         group.RegisterCommand("unfriend", async (invocation) =>
         {
-            throw new NotImplementedException();
+            var friendIdIsValid = Guid.TryParse(
+                invocation.Args[0].ToString() ?? "", out var friendId
+            );
+            if (!friendIdIsValid)
+                throw new InvalidCommandInvocationException(
+                    "Friend user ID is not a valid Guid."
+                );
+
+            await operations.UnfriendAsync(
+                invocation.ConnectionId,
+                friendId
+            );
         });
 
-        ICollection<ITopicManager> topicManagers = [
-            friendshipRequestedTopicManger,
-            newFriendTopicManager,
-            unfriendedTopicManager
-        ];
         connectionTracker.UserConnected += async (conn) =>
         {
-            foreach (var topicManager in topicManagers)
-                await topicManager.StartConsumptionAsync(conn.ConnectionId, conn.UserId);
+            await operations.HandleConnectedAsync(
+                conn.ConnectionId, conn.UserId
+            );
         };
 
         connectionTracker.UserDisconnected += async (conn) =>
         {
-            foreach (var topicManager in topicManagers)
-                await topicManager.StopConsumptionAsync(conn.ConnectionId, conn.UserId);
+            await operations
+                .HandleDisconnectedAsync(
+                    conn.ConnectionId, conn.UserId
+                );
         };
 
         dispatcher.RegisterGroup("friendship", group);
     }
-    
 }

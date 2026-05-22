@@ -57,7 +57,7 @@ DOMAIN: Chat
 */
 -- Rooms
 CREATE TABLE IF NOT EXISTS rooms (
-    id UUID DEFAULT uuidv7(),
+    id UUID,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
 );
@@ -65,7 +65,7 @@ ALTER TABLE rooms ADD CONSTRAINT pk_rooms PRIMARY KEY (id);
 ALTER TABLE rooms ADD CONSTRAINT rooms_type_check
     CHECK (type IN ('group', 'dm'))
 ;
-
+CREATE INDEX IF NOT EXISTS rooms_unique_dms ON rooms ();
 -- Memberships
 CREATE TABLE IF NOT EXISTS memberships (
     userId UUID NOT NULL,

@@ -1,18 +1,18 @@
-using System.Data;
-using System.Data.Common;
 using Dapper;
-using DistChat.Node.Exceptions;
 using DistChat.Node.Functionality.DTOs.Users;
+using DistChat.Node.Functionality.Exceptions.Users;
 using Npgsql;
 
 namespace DistChat.Node.Functionality.Database.Users;
 
-public class FriendshipDbService(IDbConnection connection) : IFriendshipDbService
+public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbService
 {
+
     public async Task RequestFriendshipAsync(Guid requestingUserId, Guid targetUserId)
     {
         try
         {
+            await using var connection = await dataSource.OpenConnectionAsync();
             var rowCount = await connection.ExecuteAsync(
                 $@"
                 WITH
@@ -60,6 +60,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
     {
         try
         {
+            await using var connection = await dataSource.OpenConnectionAsync();
             var insertedCount = await connection.ExecuteAsync(
                 $@"
                 WITH
@@ -115,6 +116,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
 
     public async Task<IReadOnlyList<PublicUserDTO>> GetFriendsAsync(Guid userId)
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         var friends = await connection.QueryAsync<PublicUserDTO>(
             $@"
             SELECT u.{UserTable.Columns.Id}, u.{UserTable.Columns.Login}
@@ -130,6 +132,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
 
     public async Task<IReadOnlyList<PublicUserDTO>> GetIncomingFriendRequestsAsync(Guid userId)
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         var requests = await connection.QueryAsync<PublicUserDTO>(
             $@"
             SELECT u.{UserTable.Columns.Id}, u.{UserTable.Columns.Login}
@@ -143,8 +146,9 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
         return [.. requests];
     }
     
-    public async Task DeclineFriendshipAsync(Guid decliningUserId, Guid requestingUserId)
+    public async Task DeclineFriendRequestAsync(Guid decliningUserId, Guid requestingUserId)
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         await connection.ExecuteAsync(
             $@"
             DELETE FROM {FriendRequestTable.TableName} 
@@ -163,6 +167,7 @@ public class FriendshipDbService(IDbConnection connection) : IFriendshipDbServic
 
     public async Task UnfriendAsync(Guid initiatingUserId, Guid friendUserId)
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         await connection.ExecuteAsync(
             $@"
             DELETE FROM {FriendshipTable.TableName} 
