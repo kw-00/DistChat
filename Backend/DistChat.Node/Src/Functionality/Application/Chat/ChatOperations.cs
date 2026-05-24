@@ -194,7 +194,10 @@ public class ChatOperations(
                 await messageReceived.StartConsumptionAsync(connectionId, roomId.Value);
                 roomFocusTracker.SetRoomFocus(connectionId, roomId.Value);
                 messages = await messageDbService.GetMessagesAsync(
-                    roomId.Value, options.Value.MessageBatchSize, newerFirst: true
+                    userId, 
+                    roomId.Value, 
+                    options.Value.MessageBatchSize, 
+                    newestFirst: true
                 );
                 messages = [.. messages.Reverse()];
             }
@@ -223,12 +226,16 @@ public class ChatOperations(
 
         try
         {
+            var userId = connectionTracker.GetUserId(connectionId);
             var roomId = roomFocusTracker.GetRoomFocus(connectionId);
             var messages = await messageDbService.GetMessagesAsync(
-                roomId, 50, before: oldestMessageOnClientId, newerFirst: true
+                userId, 
+                roomId, 
+                50, 
+                before: oldestMessageOnClientId, 
+                newestFirst: true
             );
             messages = [.. messages.Reverse()];
-            var userId = connectionTracker.GetUserId(connectionId);
             await messageReceived.StopConsumptionAsync(connectionId, roomId);
             return messages;
         }
@@ -245,17 +252,23 @@ public class ChatOperations(
         await synchronization.WaitConnectionAsync(connectionId);
         try
         {
+            var userId = connectionTracker.GetUserId(connectionId);
             var roomId = roomFocusTracker.GetRoomFocus(connectionId);
             var messages = await messageDbService.GetMessagesAsync(
-                roomId, 50, after: newestMessageOnClientId, newerFirst: false
+                userId, 
+                roomId, 
+                50, 
+                after: newestMessageOnClientId, 
+                newestFirst: false
             );
             if (messages.Count < options.Value.MessageBatchSize)
             {
                 await messageReceived.StartConsumptionAsync(connectionId, roomId);
                 var missedMessages = await messageDbService.GetMessagesAsync(
+                    userId,
                     messages[messages.Count - 1].Id, 
                     options.Value.MessageBatchSize, 
-                    newerFirst: false
+                    newestFirst: false
                 );
                 messages = [.. messages, .. missedMessages];
             }

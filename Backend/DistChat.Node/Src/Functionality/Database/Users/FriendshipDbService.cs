@@ -1,34 +1,35 @@
 using Dapper;
 using DistChat.Node.Functionality.DTOs.Users;
 using DistChat.Node.Functionality.Exceptions.Users;
+using DistChat.Node.Infrastructure.Concurrency;
 using Npgsql;
 
 namespace DistChat.Node.Functionality.Database.Users;
 
-public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbService
+public class FriendshipDbService(
+    NpgsqlDataSource dataSource
+) : IFriendshipDbService
 {
 
     public async Task RequestFriendshipAsync(Guid requestingUserId, Guid targetUserId)
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         try
         {
-            await using var connection = await dataSource.OpenConnectionAsync();
             var rowCount = await connection.ExecuteAsync(
-                $@"
-                WITH
-                    friendship AS (
-                        SELECT 1 FROM {FriendshipTable.TableName} 
-                        WHERE 
-                            {FriendshipTable.Columns.UserId} = @requestingUserId
-                            AND {FriendshipTable.Columns.FriendId} = @targetUserId
-                    )
+                $"""
                 INSERT INTO {FriendRequestTable.TableName} (
                     {FriendRequestTable.Columns.RequestingUserId}, 
                     {FriendRequestTable.Columns.TargetUserId}
                 ) 
                 SELECT @requestingUserId, @targetUserId
-                WHERE NOT EXISTS (SELECT 1 FROM friendship)
-                ",
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM {FriendshipTable.TableName} 
+                    WHERE 
+                        {FriendshipTable.Columns.UserId} = @requestingUserId
+                        AND {FriendshipTable.Columns.FriendId} = @targetUserId
+                )
+                """,
                 new
                 {
                     requestingUserId,
@@ -40,17 +41,22 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
         }
         catch (PostgresException pgEx)
         {
-            Exception toThrow = pgEx.ConstraintName switch
+            Exception? toThrow = pgEx.ConstraintName switch
             {
                 FriendRequestTable.Constraints.PrimaryKey => 
-                    new RedundantFriendRequestException(requestingUserId, targetUserId),
+                    new RedundantFriendRequestException(
+                        requestingUserId, targetUserId, pgEx
+                    ),
                 FriendRequestTable.Constraints.NoMutualRequests => 
-                    new RedundantFriendRequestException(requestingUserId, targetUserId),
+                    new RedundantFriendRequestException(
+                        requestingUserId, targetUserId, pgEx
+                    ),
                 UserTable.Constraints.PrimaryKey => 
-                    new UserNotFoundException(targetUserId),
-                _ => pgEx
+                    new UserNotFoundException(targetUserId, pgEx),
+                _ => null
             };
-            throw toThrow;
+            if (toThrow is not null) throw toThrow;
+            throw;
         }
     }
 
@@ -58,17 +64,19 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
         Guid acceptingUserId, Guid requestingUserId
     )
     {
+        await using var connection = await dataSource.OpenConnectionAsync();
         try
         {
-            await using var connection = await dataSource.OpenConnectionAsync();
             var insertedCount = await connection.ExecuteAsync(
-                $@"
+                $"""
                 WITH
                     request AS (
                         DELETE FROM {FriendRequestTable.TableName} 
                         WHERE 
-                            {FriendRequestTable.Columns.RequestingUserId} = @requestingUserId
-                            AND {FriendRequestTable.Columns.TargetUserId} = @acceptingUserId
+                            {FriendRequestTable.Columns.RequestingUserId} 
+                                = @requestingUserId
+                            AND {FriendRequestTable.Columns.TargetUserId} 
+                                = @acceptingUserId
                         RETURNING 1
                     )
                 INSERT INTO {FriendshipTable.TableName} (
@@ -84,7 +92,7 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
                 WHERE
                     EXISTS (SELECT 1 FROM request)
                 ;
-                ",
+                """,
                 new
                 {
                     requestingUserId,
@@ -92,25 +100,34 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
                 }
             );
             if (insertedCount == 0)
-                throw new FriendshipNotRequestedException(requestingUserId, acceptingUserId);
+                throw new FriendshipNotRequestedException(
+                    requestingUserId, acceptingUserId
+                );
         }
         catch (PostgresException pgEx)
         {
-            Exception toThrow = pgEx.ConstraintName switch
+            Exception? toThrow = pgEx.ConstraintName switch
             {
                 FriendshipTable.Constraints.PrimaryKey
-                    => new AlreadyFriendsException(acceptingUserId, requestingUserId),
+                    => new AlreadyFriendsException(
+                        acceptingUserId, requestingUserId, pgEx
+                    ),
                 FriendshipTable.Constraints.FkFriendId
                     => new UserNotFoundException(
-                        $"User with ID of {requestingUserId} or {acceptingUserId} not found."
+                        $"User with ID of {requestingUserId}"
+                        + " or {acceptingUserId} not found.",
+                        pgEx
                     ),
                 FriendshipTable.Constraints.FkUserId
                     => new UserNotFoundException(
-                        $"User with ID of {requestingUserId} or {acceptingUserId} not found."
+                        $"User with ID of {requestingUserId}" 
+                        + " or {acceptingUserId} not found.",
+                        pgEx
                     ),
-                _ => pgEx
+                _ => null
             };
-            throw toThrow;
+            if (toThrow is not null) throw toThrow;
+            throw;
         }
     }
 
@@ -118,45 +135,50 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         var friends = await connection.QueryAsync<PublicUserDTO>(
-            $@"
+            $"""
             SELECT u.{UserTable.Columns.Id}, u.{UserTable.Columns.Login}
             FROM {UserTable.TableName} u
             INNER JOIN {FriendshipTable.TableName} f 
                 ON f.{FriendshipTable.Columns.FriendId} = u.{UserTable.Columns.Id}
             WHERE f.{FriendshipTable.Columns.UserId} = @userId;
-            ",
+            """,
             new { userId }
         );
         return [.. friends];
     }
 
-    public async Task<IReadOnlyList<PublicUserDTO>> GetIncomingFriendRequestsAsync(Guid userId)
+    public async Task<IReadOnlyList<PublicUserDTO>> GetIncomingFriendRequestsAsync(
+        Guid userId
+    )
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         var requests = await connection.QueryAsync<PublicUserDTO>(
-            $@"
+            $"""
             SELECT u.{UserTable.Columns.Id}, u.{UserTable.Columns.Login}
             FROM {UserTable.TableName} u
             INNER JOIN {FriendRequestTable.TableName} f 
-                ON f.{FriendRequestTable.Columns.RequestingUserId} = u.{UserTable.Columns.Id}
+                ON f.{FriendRequestTable.Columns.RequestingUserId} 
+                    = u.{UserTable.Columns.Id}
             WHERE f.{FriendRequestTable.Columns.TargetUserId} = @userId;
-            ",
+            """,
             new { userId }
         );
         return [.. requests];
     }
     
-    public async Task DeclineFriendRequestAsync(Guid decliningUserId, Guid requestingUserId)
+    public async Task DeclineFriendRequestAsync(
+        Guid decliningUserId, Guid requestingUserId
+    )
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         await connection.ExecuteAsync(
-            $@"
+            $"""
             DELETE FROM {FriendRequestTable.TableName} 
             WHERE 
                 {FriendRequestTable.Columns.RequestingUserId} = @requestingUserId
                 AND {FriendRequestTable.Columns.TargetUserId} = @decliningUserId
             ;
-            ",
+            """,
             new
             {
                 requestingUserId,
@@ -169,7 +191,7 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         await connection.ExecuteAsync(
-            $@"
+            $"""
             DELETE FROM {FriendshipTable.TableName} 
             WHERE 
                 {FriendshipTable.Columns.UserId} = @initiatingUserId
@@ -178,7 +200,7 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
                 {FriendshipTable.Columns.UserId} = @friendUserId
                 AND {FriendshipTable.Columns.FriendId} = @initiatingUserId
             ;
-            ",
+            """,
             new
             {
                 initiatingUserId,
@@ -187,3 +209,4 @@ public class FriendshipDbService(NpgsqlDataSource dataSource) : IFriendshipDbSer
         );
     }
 }
+

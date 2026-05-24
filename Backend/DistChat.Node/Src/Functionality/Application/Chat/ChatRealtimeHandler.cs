@@ -1,10 +1,5 @@
 using System.Text.Json;
-using DistChat.Node.Functionality.Database.Chat;
-using DistChat.Node.Functionality.Exceptions.Users;
-using DistChat.Node.Functionality.Options.Chat;
-using DistChat.Node.Infrastructure.Concurrency;
 using DistChat.Node.Infrastructure.RealtimeHub;
-using Microsoft.Extensions.Options;
 
 namespace DistChat.Node.Functionality.Application.Chat;
 
@@ -108,21 +103,25 @@ public class ChatRealtimeHandler
             var roomIdArg = invocation.Args[0]?.ToString();
 
             Guid? roomId =
-                roomIdArg is null ? null :
-                Guid.TryParse(roomIdArg, out var parsed) ? parsed :
-                throw new InvalidCommandInvocationException("Room ID is not a valid Guid.");
+                roomIdArg is null 
+                ? null 
+                : Guid.TryParse(roomIdArg, out var parsed) 
+                    ? parsed 
+                    : throw new InvalidCommandInvocationException(
+                        "Room ID is not a valid Guid."
+                    );
 
             return await operations.FocusRoomAsync(invocation.ConnectionId, roomId);
         });
 
         group.RegisterCommand("goOlder", async (invocation) =>
         {
-            var argValid = Guid.TryParse(
+            var oldestmessageIdValid = Guid.TryParse(
                 invocation.Args[0]?.ToString() ?? "",
                 out var oldestMessageId
             );
 
-            if (!argValid)
+            if (!oldestmessageIdValid)
                 throw new InvalidCommandInvocationException(
                     "Oldest message ID is not a valid Guid."
                 );
@@ -135,12 +134,12 @@ public class ChatRealtimeHandler
 
         group.RegisterCommand("goNewer", async (invocation) =>
         {
-            var argValid = Guid.TryParse(
+            var newestMessageIdValid = Guid.TryParse(
                 invocation.Args[0]?.ToString() ?? "",
                 out var newestMessageId
             );
 
-            if (!argValid)
+            if (!newestMessageIdValid)
                 throw new InvalidCommandInvocationException(
                     "Newest message ID is not a valid Guid."
                 );
@@ -153,24 +152,30 @@ public class ChatRealtimeHandler
 
         connectionTracker.UserConnected += async (conn) =>
         {
-            await operations.HandleConnectedAsync(conn.ConnectionId, conn.UserId);
+            await operations.HandleConnectedAsync(
+                conn.ConnectionId, conn.UserId
+            );
         };
 
         connectionTracker.UserDisconnected += async (conn) =>
         {
-            await operations.HandleDisconnectedAsync(conn.ConnectionId, conn.UserId);
+            await operations.HandleDisconnectedAsync(
+                conn.ConnectionId, conn.UserId
+            );
         };
         dispatcher.RegisterGroup("chat", group);
     }
 
-    private Guid ParseRoomId(object obj)
+    private static Guid ParseRoomId(object obj)
     {
         var roomIdIsValid = Guid.TryParse(
             obj.ToString(),
             out var roomId
         );
         if (!roomIdIsValid)
-            throw new InvalidCommandInvocationException("Room ID is not a valid Guid.");
+            throw new InvalidCommandInvocationException(
+                "Room ID is not a valid Guid."
+            );
         return roomId;
     }
 }

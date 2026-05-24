@@ -13,7 +13,7 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
         {
             await using var connection = await dataSource.OpenConnectionAsync();
             var user = await connection.QuerySingleAsync<User>(
-                $@"
+                $"""
                 INSERT INTO {UserTable.TableName} (
                     {UserTable.Columns.Login}, 
                     {UserTable.Columns.Email}, 
@@ -25,7 +25,7 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
                     @passwordHash
                 )
                 RETURNING *;
-                ",
+                """,
                 new
                 {
                     login,
@@ -39,8 +39,10 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
         {
             Exception? toThrow = pgEx.ConstraintName switch
             {
-                UserTable.Constraints.UniqueLogin => new LoginInUseException(login),
-                UserTable.Constraints.UniqueEmail => new EmailInUseException(email),
+                UserTable.Constraints.UniqueLogin 
+                    => new LoginInUseException(login, pgEx),
+                UserTable.Constraints.UniqueEmail 
+                    => new EmailInUseException(email, pgEx),
                 _ => null
             };
             if (toThrow is not null) throw toThrow;
@@ -52,7 +54,10 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            $@"SELECT * FROM {UserTable.TableName} WHERE {UserTable.Columns.Id} = @id;",
+            $"""
+            SELECT * FROM {UserTable.TableName} 
+            WHERE {UserTable.Columns.Id} = @id;
+            """,
             new { id }
         );
     }
@@ -61,7 +66,10 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            $@"SELECT * FROM {UserTable.TableName} WHERE {UserTable.Columns.Login} = @login;",
+            $"""
+            SELECT * FROM {UserTable.TableName} 
+            WHERE {UserTable.Columns.Login} = @login;
+            """,
             new { login }
         );
     }
@@ -69,7 +77,10 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            $@"SELECT * FROM {UserTable.TableName} WHERE {UserTable.Columns.Email} = @email;",
+            $"""
+            SELECT * FROM {UserTable.TableName} 
+            WHERE {UserTable.Columns.Email} = @email;
+            """,
             new { email }
         );
     }
@@ -82,11 +93,11 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         await connection.ExecuteAsync(
-            $@"
+            $"""
             UPDATE {UserTable.TableName} 
             SET {UserTable.Columns.PasswordHash} = @passwordHash 
             WHERE {UserTable.Columns.Id} = @userId;
-            ",
+            """,
             new
             {
                 userId,

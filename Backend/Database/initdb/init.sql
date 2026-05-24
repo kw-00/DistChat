@@ -58,19 +58,46 @@ DOMAIN: Chat
 -- Rooms
 CREATE TABLE IF NOT EXISTS rooms (
     id UUID,
-    name TEXT NOT NULL,
+    name TEXT DEFAULT NULL,
     type TEXT NOT NULL,
+    dmUserLowId UUID DEFAULT NULL
+    dmUserHighId UUID DEFAULT NULL,
 );
 ALTER TABLE rooms ADD CONSTRAINT pk_rooms PRIMARY KEY (id);
 ALTER TABLE rooms ADD CONSTRAINT rooms_type_check
     CHECK (type IN ('group', 'dm'))
 ;
-CREATE INDEX IF NOT EXISTS rooms_unique_dms ON rooms ();
+CREATE INDEX rooms_unique_dms ON rooms (dmUserHighId, dmUserLowId)
+WHERE type = 'dm';
+ALTER TABLE rooms ADD CONSTRAINT rooms_fk_dmUserLowId FOREIGN KEY (dmUserLowId)
+    REFERENCES users (id)
+    ON DELETE SET NULL
+;
+ALTER TABLE rooms ADD CONSTRAINT rooms_fk_dmUserHighId FOREIGN KEY (dmUserHighId)
+    REFERENCES users (id)
+    ON DELETE SET NULL
+;
+ALTER TABLE rooms ADD CONSTRAINT rooms_dm_user_order
+    CHECK (dmUserLowId < dmUserHighId)
+;
+
+-- Roles
+CREATE TABLE IF NOT EXISTS roles (
+    id TEXT PRIMARY KEY,
+    level INTEGER UNIQUE
+);
+INSERT INTO roles (id, level)
+VALUES
+    ('owner', 3),
+    ('elder', 2),
+    ('member', 1)
+;
+
 -- Memberships
 CREATE TABLE IF NOT EXISTS memberships (
     userId UUID NOT NULL,
     roomId UUID NOT NULL,
-    role TEXT NOT NULL,
+    roleId TEXT,
 );
 ALTER TABLE membership ADD CONSTRAINT pk_membership PRIMARY KEY (userId, roomId);
 ALTER TABLE membership ADD CONSTRAINT memberships_fk_userId
@@ -81,8 +108,9 @@ ALTER TABLE membership ADD CONSTRAINT memberships_fk_roomId
     FOREIGN KEY (roomId) REFERENCES rooms (id)
     ON DELETE CASCADE
 ;
-ALTER TABLE membership ADD CONSTRAINT memberships_role_check
-    CHECK (role IN ('owner', 'elter', 'member'))
+ALTER TABLE membership ADD CONSTRAINT memberships_fk_roleId
+    FOREIGN KEY (roleId) REFERENCES roles (id)
+    ON DELETE RESTRICT
 ;
 
 -- Messages
