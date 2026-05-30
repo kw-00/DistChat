@@ -4,14 +4,14 @@ namespace DistChat.Node.Functionality.Exceptions.Users;
 
 public class UserNotFoundException : DistChatException
 {
-    public UserNotFoundException(Guid id) 
+    public UserNotFoundException(Guid id)
         : base($"User with id of \"{id}\" not found.") { }
 
-    public UserNotFoundException(Guid id, Exception innerException) 
+    public UserNotFoundException(Guid id, Exception innerException)
         : base($"User with id of \"{id}\" not found.", innerException) { }
     public UserNotFoundException(string message) : base(message) { }
 
-    public UserNotFoundException(string message, Exception innerException) 
+    public UserNotFoundException(string message, Exception innerException)
         : base(message, innerException) { }
 }
 

@@ -6,10 +6,10 @@ public interface IMessageDbService
 
     Task<IReadOnlyList<Message>> GetMessagesAsync(
         Guid inquiringUserId,
-        Guid roomId, 
-        int limit, 
-        Guid? before = null, 
-        Guid? after = null, 
+        Guid roomId,
+        int limit,
+        Guid? before = null,
+        Guid? after = null,
         bool newestFirst = false
     );
 }

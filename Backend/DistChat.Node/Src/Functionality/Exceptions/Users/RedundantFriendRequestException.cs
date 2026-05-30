@@ -6,10 +6,10 @@ public class RedundantFriendRequestException(
     Guid requestingUserId, Guid targetUserId, Exception innerException
 )
     : DistChatException(
-        $"Cannot create friend request from user with ID of \"{requestingUserId}\"" 
+        $"Cannot create friend request from user with ID of \"{requestingUserId}\""
         + $" to user wiTH ID of \"{targetUserId}\"."
-        + " Either an equivalent friend request already exists," 
-        + "or an opposite request exists." 
+        + " Either an equivalent friend request already exists,"
+        + "or an opposite request exists."
         + "Duplicate or mutual friend requests are not alloeed.",
         innerException
     );

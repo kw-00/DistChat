@@ -39,9 +39,9 @@ public class UserDbService(NpgsqlDataSource dataSource) : IUserDbService
         {
             Exception? toThrow = pgEx.ConstraintName switch
             {
-                UserTable.Constraints.UniqueLogin 
+                UserTable.Constraints.UniqueLogin
                     => new LoginInUseException(login, pgEx),
-                UserTable.Constraints.UniqueEmail 
+                UserTable.Constraints.UniqueEmail
                     => new EmailInUseException(email, pgEx),
                 _ => null
             };

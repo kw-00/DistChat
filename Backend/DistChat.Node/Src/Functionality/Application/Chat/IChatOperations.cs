@@ -1,4 +1,5 @@
 using DistChat.Node.Functionality.Database.Chat;
+using DistChat.Node.Functionality.DTOs.Chat;
 
 namespace DistChat.Node.Functionality.Application.Chat;
 
@@ -9,7 +10,7 @@ public interface IChatOperations
         string connectionId, IEnumerable<Guid> memberIds, string name
     );
 
-    Task<IReadOnlyList<Room>> GetRoomsAsync(string connectionId);
+    Task<IReadOnlyList<RoomDTO>> GetRoomsAsync(string connectionId);
 
     Task AddUserAsync(string connectionId, Guid roomId, Guid userToAddId);
 

@@ -14,7 +14,7 @@ public class EventManager : IEventManager
     private readonly JsonSerializerOptions _jsonOptions;
 
 
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> 
+    private readonly ConcurrentDictionary<string, CancellationTokenSource>
         _subCancellation = new();
 
     private readonly PartitionedLock<string> _subCancellationLocks = new(10000);
@@ -44,7 +44,7 @@ public class EventManager : IEventManager
     }
 
     public Task StartConsumptionAsync(string connectionId, EventAddress eventAddress)
-    { 
+    {
         var subscriptionId = CreateSubscriptionId(connectionId, eventAddress);
         var cancellation = new CancellationTokenSource();
         var address = eventAddress.Serialize();
@@ -64,7 +64,7 @@ public class EventManager : IEventManager
                     continue;
                 }
                 var evt = JsonSerializer.Deserialize<Event>(data, _jsonOptions);
-                if (evt is null) 
+                if (evt is null)
                 {
                     _logger.LogError("NATS message was not deserialized successfully.");
                     continue;
@@ -78,7 +78,7 @@ public class EventManager : IEventManager
 
         lock (_subCancellationLocks.Get(subscriptionId))
         {
-            if (_subCancellation.ContainsKey(subscriptionId)) 
+            if (_subCancellation.ContainsKey(subscriptionId))
                 return Task.CompletedTask;
 
             _subCancellation[subscriptionId] = cancellation;
@@ -101,5 +101,5 @@ public class EventManager : IEventManager
 
     private string CreateSubscriptionId(string connectionId, EventAddress eventAddress)
         => JsonSerializer.Serialize(new { connectionId, eventAddress });
-    
+
 }

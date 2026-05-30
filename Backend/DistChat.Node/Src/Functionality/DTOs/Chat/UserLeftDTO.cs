@@ -5,7 +5,7 @@ public class UserLeftDTO
     public Guid UserId { get; }
     public Guid RoomId { get; }
 
-    public UserLeftDTO(Guid userId, Guid roomId) 
+    public UserLeftDTO(Guid userId, Guid roomId)
     {
         UserId = userId;
         RoomId = roomId;

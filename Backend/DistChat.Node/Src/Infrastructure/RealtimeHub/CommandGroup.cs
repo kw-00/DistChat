@@ -2,7 +2,7 @@ namespace DistChat.Node.Infrastructure.RealtimeHub;
 
 public class CommandGroup
 {
-    private readonly Dictionary<string, Func<CommandInvocation, Task<object>>> 
+    private readonly Dictionary<string, Func<CommandInvocation, Task<object>>>
         _handlers = [];
 
     public void RegisterCommand(string key, Func<CommandInvocation, Task<object>> handler)
@@ -40,7 +40,7 @@ public class CommandGroup
 
     public async Task<object> ExecuteAsync(string key, CommandInvocation invocation)
     {
-        var handler = _handlers.GetValueOrDefault(key) 
+        var handler = _handlers.GetValueOrDefault(key)
             ?? throw new KeyNotFoundException(
                 $"Command \"{key}\" is not registered in command group."
             );

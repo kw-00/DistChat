@@ -1,16 +1,16 @@
 using DistChat.Node.Functionality.DTOs.Chat;
 using DistChat.Node.Functionality.DTOs.Users;
 
-namespace DistChat.Node.Functionality.Database.Chat; 
+namespace DistChat.Node.Functionality.Database.Chat;
 
-public interface IRoomDbService 
+public interface IRoomDbService
 {
     Task<GroupRoomDTO> CreateGroupRoomAsync(
         Guid id, string name, Guid creatorId, IEnumerable<Guid> memberIds
     );
     Task<DmRoomDTO> ConnectUsersAsync(Guid newDmId, Guid userAId, Guid userBId);
 
-    Task<RoomDTO> GetRoomAsync(Guid roomId);
+    Task<GroupRoomDTO> GetGroupRoomAsync(Guid roomId);
     Task<IReadOnlyList<RoomDTO>> GetRoomsAsync(Guid userId);
     Task<IReadOnlyList<PublicUserDTO>> GetUsersAsync(Guid roomId);
     Task AddUserAsync(

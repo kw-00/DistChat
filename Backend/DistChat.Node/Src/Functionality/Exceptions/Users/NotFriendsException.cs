@@ -5,13 +5,30 @@ namespace DistChat.Node.Functionality.Exceptions.Users;
 public class NotFriendsException : DistChatException
 {
     public NotFriendsException(
-        Guid userAId, Guid UserBId
+        Guid userAId, Guid userBId
     )
         : base(
-            $"Users with IDs of \"{userAId}\"" 
-            + $" and \"{UserBId}\" are not friends."
-        ) { }
+            GetMessage(userAId, userBId)
+        )
+    { }
 
-    public NotFriendsException(string message) 
+    public NotFriendsException(
+        Guid userAId, Guid userBId, Exception innerException
+    )
+        : base(
+            GetMessage(userAId, userBId),
+            innerException
+        )
+    { }
+
+
+    public NotFriendsException(string message)
         : base(message) { }
+
+    private static string GetMessage(Guid userAId, Guid userBId)
+    {
+        return
+            $"Users with IDs of \"{userAId}\""
+            + $" and \"{userBId}\" are not friends.";
+    }
 }

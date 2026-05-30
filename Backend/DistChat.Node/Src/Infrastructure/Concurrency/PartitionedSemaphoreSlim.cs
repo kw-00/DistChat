@@ -6,9 +6,9 @@ public class PartitionedSemaphoreSlim<TPartitionKey>
     : PartitionedAccessor<TPartitionKey, SemaphoreSlim>
     where TPartitionKey : notnull
 {
-    public PartitionedSemaphoreSlim(int partitionCount, int initialLimit) 
+    public PartitionedSemaphoreSlim(int partitionCount, int initialLimit)
         : base(partitionCount, () => new SemaphoreSlim(initialLimit)) { }
 
-    public PartitionedSemaphoreSlim(int partitionCount, int initialLimit, int maxLimit) 
+    public PartitionedSemaphoreSlim(int partitionCount, int initialLimit, int maxLimit)
         : base(partitionCount, () => new SemaphoreSlim(initialLimit, maxLimit)) { }
 }

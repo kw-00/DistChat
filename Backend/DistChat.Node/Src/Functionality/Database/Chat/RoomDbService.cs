@@ -8,68 +8,73 @@ using DistChat.Node.Functionality.Exceptions.Users;
 using DistChat.Node.Functionality.Models.Chat;
 using Npgsql;
 
-namespace DistChat.Node.Functionality.Database.Chat; 
+namespace DistChat.Node.Functionality.Database.Chat;
 
-public class RoomDbService(NpgsqlDataSource dataSource) 
+public class RoomDbService(NpgsqlDataSource dataSource)
     : IRoomDbService
 {
     public async Task<GroupRoomDTO> CreateGroupRoomAsync(
         Guid id, string name, Guid creatorId, IEnumerable<Guid> memberIds
     )
     {
-        var memberIdList = memberIds.ToArray(); 
+        var memberIdList = memberIds.ToArray();
         await using var connection = await dataSource.OpenConnectionAsync();
-        var transaction = await connection.BeginTransactionAsync();
         try
         {
-            var memberIdsThatAreFriends = await connection.ExecuteAsync(
+            var groupRoom = await connection.QuerySingleAsync<GroupRoomDTO>(
                 $"""
-                SELECT 1
-                FROM {UserTable.TableName} u
-                INNER JOIN {FriendshipTable.TableName} f
-                    ON f.{FriendshipTable.Columns.UserId} = u.{UserTable.Columns.Id}
-                WHERE
-                    u.{UserTable.Columns.Id} = @creatorId 
-                    AND f.{FriendshipTable.Columns.FriendId} = ANY(@memberIds)
-                ;
-                """,
-                new { creatorId, memberIds = memberIdList },
-                transaction
-            );
-            if (memberIdsThatAreFriends < memberIdList.Length)
-                throw new NotFriendsException(
-                    "One or more of the users to be added to room on its creation"
-                    + " are not friends with the room's creator."
-                );
-            var room = await connection.QuerySingleAsync<GroupRoomDTO>(
-                $"""
+                BEGIN;
+            
+                CREATE TEMP TABLE notFriends
+                AS SELECT 1 FROM unnest(@memberIds) AS memberIds(id)
+                WHERE NOT id = ANY(
+                    SELECT {FriendshipTable.Columns.FriendId}
+                    FROM {FriendshipTable.TableName}
+                    WHERE {FriendshipTable.Columns.UserId} = @creatorId
+                )
+                ON COMMIT DROP;
+
+            
                 INSERT INTO {RoomTable.TableName} (
                     {RoomTable.Columns.Id},
                     {RoomTable.Columns.Name},
                     {RoomTable.Columns.Type}
                 )
-                VALUES (@id, @name, '{RoomTable.Type.Group}')
+                SELECT
+                    @id,
+                    @name,
+                    '{RoomTable.Type.Group}'
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM notFriends
+                )
                 RETURNING *;
-                
+
                 INSERT INTO {MembershipTable.TableName} (
                     {MembershipTable.Columns.UserId},
                     {MembershipTable.Columns.RoomId},
                     {MembershipTable.Columns.RoleId}
                 )
-                SELECT @creatorId, @id, '{RoleTable.Role.Owner}'
+                SELECT friendId, @id, '{RoleTable.Role.Member}'
+                FROM unnest(@memberIds) AS toBeAdded(friendId)
                 UNION ALL
-                SELECT memberId, @id, '{RoleTable.Role.Member}'
-                FROM UNNEST(@memberIds) AS members(memberId);
+                SELECT @creatorId, @id, '{RoleTable.Role.Owner}';
+
+                COMMIT;    
                 """,
-                new { id, name, creatorId, memberIds = memberIdList },
-                transaction
+                new { id, creatorId, memberIds }
             );
-            await transaction.CommitAsync();
-            return room;
+            return groupRoom;
         }
-        catch
+        catch (PostgresException pgEx)
         {
-            await transaction.RollbackAsync();
+            if (
+                pgEx.ConstraintName
+                    == MembershipTable.Constraints.FkMembershipRoomId
+            )
+                throw new NotFriendsException(
+                    $"Some users could not be added, as they are"
+                        + " not friends of user with ID of {creatorId}."
+                );
             throw;
         }
     }
@@ -78,109 +83,83 @@ public class RoomDbService(NpgsqlDataSource dataSource)
     )
     {
         await using var connection = await dataSource.OpenConnectionAsync();
-        var transaction = await connection.BeginTransactionAsync();
+
+        var orderedUserIds = new Guid[] { userAId, userBId }
+            .Order()
+            .ToArray();
+        var userLowId = orderedUserIds[0];
+        var userHighId = orderedUserIds[1];
+
+        var defaultRole = RoleTable.Role.Member;
         try
         {
-            var orderedUserIds = new Guid[] { userAId, userBId }
-                .Order()
-                .ToArray();
-            var userLowId = orderedUserIds[0];
-            var userHighId = orderedUserIds[1];
-            var friendshipRowcount = await connection.ExecuteAsync(
-                $@"
-                SELECT 1 FROM {FriendshipTable.TableName}
-                WHERE 
-                    {FriendshipTable.Columns.UserId} = @userLowId
-                    AND {FriendshipTable.Columns.FriendId} = @userHighId
-                ;
-                ",
-                new { userHighId, userLowId },
-                transaction
-            );
-            if (friendshipRowcount == 0) 
-                throw new NotFriendsException(userLowId, userHighId);
-            var dmRoomOrNothing = await connection
-                .QuerySingleOrDefaultAsync<DmRoomDTO>(
+            var newDm = await connection.QuerySingleAsync<DmRoomDTO>(
                 $"""
+                BEGIN;
                 INSERT INTO {RoomTable.TableName} (
                     {RoomTable.Columns.Id},
                     {RoomTable.Columns.Type},
-                    {RoomTable.Columns.DmUserLowId}
-                    {RoomTable.Columns.DmUserHighId},
+                    {RoomTable.Columns.DmUserLowId},
+                    {RoomTable.Columns.DmUserHighId}
                 )
-                VALUES (
-                    @newDmId,
-                    '{RoomTable.Type.Dm}',
-                    @userLowId,
+                SELECT 
+                    @newDmId, 
+                    '{RoomTable.Type.Dm}', 
+                    @userLowId, 
                     @userHighId
+                WHERE EXISTS (
+                    SELECT 1 FROM {FriendshipTable.TableName}
+                    WHERE
+                        {FriendshipTable.Columns.UserId} = @userLowId
+                        AND {FriendshipTable.Columns.FriendId} = @userHighId
                 )
-                ON CONFLICT ON CONSTRAINT 
-                    {RoomTable.Constraints.UniqueDms}
-                    DO NOTHING
                 RETURNING *;
+
                 INSERT INTO {MembershipTable.TableName} (
-                    {MembershipTable.Columns.UserId},
-                    {MembershipTable.Columns.RoomId},
+                    {MembershipTable.Columns.UserId}
+                    {MembershipTable.Columns.RoomId}
                     {MembershipTable.Columns.RoleId}
                 )
-                VALUES 
-                (
-                    @userLowId,
-                    @newDmId,
-                    '{RoleTable.Role.Member}'
-                ), 
-                (
-                    @userHighId,
-                    @newDmId,
-                    '{RoleTable.Role.Member}'
-                );
-                """,
-                new { newDmId, userHighId, userLowId },
-                transaction
+                VALUES
+                    (@userLowId, @newDmId, {defaultRole}),
+                    (@userHighId, @newDmId, {defaultRole})
+                ;
+                COMMIT;
+                """
             );
-            DmRoomDTO dmRoom;
-            if (dmRoomOrNothing is null)
-            {
-                dmRoom = await connection.QuerySingleAsync<DmRoomDTO>(
-                    $"""
-                    SELECT * FROM {RoomTable.TableName}
-                    WHERE 
-                        {RoomTable.Columns.DmUserHighId} = @userHighId
-                        AND {RoomTable.Columns.DmUserLowId} = @userLowId
-                    ;
-                    """,
-                    transaction
-                );
-            }
-            else
-            {
-                dmRoom = dmRoomOrNothing;
-            }
-            return dmRoom;
+            return newDm;
         }
-        catch (Exception ex)
+        catch (PostgresException pgEx)
         {
-            await transaction.RollbackAsync();
-            if (ex is PostgresException pgEx)
+            Exception? toThrow = pgEx.ConstraintName switch
             {
-                
-            }
+                RoomTable.Constraints.UniqueDms
+                    => new DuplicateDmException(userLowId, userHighId, pgEx),
+                MembershipTable.Constraints.FkMembershipRoomId
+                    => new NotFriendsException(userLowId, userHighId, pgEx),
+                _ => null
+            };
+            if (toThrow is not null) throw toThrow;
             throw;
-        } 
+        }
+
     }
 
-    public async Task<RoomDTO> GetRoomAsync(Guid roomId)
+    public async Task<GroupRoomDTO> GetGroupRoomAsync(Guid roomId)
     {
         await using var connection = await dataSource.OpenConnectionAsync();
-        var room = await connection.QuerySingleAsync<Room>(
+        var room = await connection.QuerySingleAsync<GroupRoomDTO>(
             $"""
             SELECT * 
             FROM {RoomTable.TableName}
-            WHERE {RoomTable.Columns.Id} = @roomId
+            WHERE
+                {RoomTable.Columns.Id} = @roomId
+                AND {RoomTable.Columns.Type} = '{RoomTable.Type.Group}'
+            ;
             """,
             new { roomId }
         );
-        return RoomDTO.FromRoom(room);
+        return room;
     }
     public async Task<IReadOnlyList<RoomDTO>> GetRoomsAsync(Guid userId)
     {
@@ -248,7 +227,7 @@ public class RoomDbService(NpgsqlDataSource dataSource)
                     AND {FriendshipTable.Columns.FriendId} = @userToBeAddedId
             )
             """;
-            
+
         try
         {
             var rowCount = await connection.ExecuteAsync(
@@ -288,7 +267,7 @@ public class RoomDbService(NpgsqlDataSource dataSource)
                         "Room is a DM room. Adding users to DM rooms is not allowed."
                     );
                 var usersAreFriends = await checks.ReadSingleAsync<bool>();
-                    throw new NotFriendsException(initiatingUserId, userToBeAddedId);
+                throw new NotFriendsException(initiatingUserId, userToBeAddedId);
             }
         }
         catch (PostgresException pgEx)
@@ -334,7 +313,7 @@ public class RoomDbService(NpgsqlDataSource dataSource)
             ;
             """,
             new { initiatingUserId, userToBeRemovedId, groupRoomId }
-        ); 
+        );
         if (rowCount == 0)
             throw new DistChatException("Cannot remove user from room.");
     }

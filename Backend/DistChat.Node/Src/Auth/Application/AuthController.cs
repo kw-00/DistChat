@@ -32,7 +32,7 @@ public class AuthController(
 
     [HttpPost("authenticate")]
     public async Task<IActionResult> Authenticate(
-        [FromBody] string? login, 
+        [FromBody] string? login,
         [FromBody] string? email,
         [FromBody] string password
     )
@@ -56,17 +56,17 @@ public class AuthController(
 
     [HttpPost("request-registration-link")]
     public async Task<IActionResult> RequestRegistrationLink(
-        [FromBody] string login, 
-        [FromBody] string email, 
+        [FromBody] string login,
+        [FromBody] string email,
         [FromBody] string password
     )
     {
-        var pendingRegistration 
+        var pendingRegistration
             = await registrationDbService.CreatePendingRegistrationAsync(
                 login, email, password
             );
         await emailService.SendAsync(
-            email, 
+            email,
             "DistChat Registration",
             $"""
             <!DOCTYPE html>

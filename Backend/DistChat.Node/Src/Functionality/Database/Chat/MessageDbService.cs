@@ -12,7 +12,7 @@ public class MessageDbService(NpgsqlDataSource dataSource) : IMessageDbService
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         try
-        {            
+        {
             var message = await connection.QuerySingleOrDefaultAsync<Message>(
                 $"""
                 INSERT INTO {MessageTable.TableName} (
@@ -52,10 +52,10 @@ public class MessageDbService(NpgsqlDataSource dataSource) : IMessageDbService
 
     public async Task<IReadOnlyList<Message>> GetMessagesAsync(
         Guid inquiringUserId,
-        Guid roomId, 
-        int limit, 
-        Guid? before = null, 
-        Guid? after = null, 
+        Guid roomId,
+        int limit,
+        Guid? before = null,
+        Guid? after = null,
         bool newestFirst = false
     )
     {
@@ -79,13 +79,14 @@ public class MessageDbService(NpgsqlDataSource dataSource) : IMessageDbService
                 {MessageTable.Columns.Id} {orderBy}
             LIMIT {limit};
             """,
-            new { 
-                inquiringUserId, 
-                roomId, 
-                before, 
-                after, 
-                newestFirst, 
-                limit 
+            new
+            {
+                inquiringUserId,
+                roomId,
+                before,
+                after,
+                newestFirst,
+                limit
             }
         );
         return [.. messages];

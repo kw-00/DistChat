@@ -36,22 +36,22 @@ public class FriendshipDbService(
                     targetUserId
                 }
             );
-            if (rowCount == 0) 
+            if (rowCount == 0)
                 throw new AlreadyFriendsException(requestingUserId, targetUserId);
         }
         catch (PostgresException pgEx)
         {
             Exception? toThrow = pgEx.ConstraintName switch
             {
-                FriendRequestTable.Constraints.PrimaryKey => 
+                FriendRequestTable.Constraints.PrimaryKey =>
                     new RedundantFriendRequestException(
                         requestingUserId, targetUserId, pgEx
                     ),
-                FriendRequestTable.Constraints.NoMutualRequests => 
+                FriendRequestTable.Constraints.NoMutualRequests =>
                     new RedundantFriendRequestException(
                         requestingUserId, targetUserId, pgEx
                     ),
-                UserTable.Constraints.PrimaryKey => 
+                UserTable.Constraints.PrimaryKey =>
                     new UserNotFoundException(targetUserId, pgEx),
                 _ => null
             };
@@ -120,7 +120,7 @@ public class FriendshipDbService(
                     ),
                 FriendshipTable.Constraints.FkUserId
                     => new UserNotFoundException(
-                        $"User with ID of {requestingUserId}" 
+                        $"User with ID of {requestingUserId}"
                         + " or {acceptingUserId} not found.",
                         pgEx
                     ),
@@ -165,7 +165,7 @@ public class FriendshipDbService(
         );
         return [.. requests];
     }
-    
+
     public async Task DeclineFriendRequestAsync(
         Guid decliningUserId, Guid requestingUserId
     )

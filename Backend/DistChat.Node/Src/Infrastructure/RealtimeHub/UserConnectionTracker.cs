@@ -12,12 +12,12 @@ public class UserConnectionTracker
     public event Func<TrackedConnectionInfo, Task>? UserConnected;
     public event Func<TrackedConnectionInfo, Task>? UserDisconnected;
     private readonly ConcurrentDictionary<string, Guid> _connections = new();
-    private readonly ConcurrentDictionary<Guid, ICollection<string>> 
+    private readonly ConcurrentDictionary<Guid, ICollection<string>>
         _users = new();
 
     private readonly PartitionedLock<Guid> _locks = new(10_000);
 
-    
+
 
     public Guid GetUserId(string connectionId)
     {
@@ -28,7 +28,7 @@ public class UserConnectionTracker
         catch (KeyNotFoundException ex)
         {
             throw new UserNotFoundException(
-                "No user found associated with" 
+                "No user found associated with"
                 + $" connection ID of \"{connectionId}\".",
                 ex
             );
@@ -37,15 +37,15 @@ public class UserConnectionTracker
 
 
     public Guid? TryGetUserId(string connectionId)
-        =>_connections.TryGetValue(connectionId, out var userId) ? userId : null;
+        => _connections.TryGetValue(connectionId, out var userId) ? userId : null;
 
     public IReadOnlyCollection<string> GetConnections(Guid userId)
     {
-        return _users.TryGetValue(userId, out var connections) 
-            ? [.. connections] 
+        return _users.TryGetValue(userId, out var connections)
+            ? [.. connections]
             : [];
     }
-    
+
 
     public void Put(string connectionId, Guid userId)
     {
@@ -120,7 +120,7 @@ public class UserConnectionTracker
         {
             throw new DistChatException(
                 "An event was invoked for a connection,"
-                + " yet that connection does not exist in tracker.", 
+                + " yet that connection does not exist in tracker.",
                 ex
             );
         }

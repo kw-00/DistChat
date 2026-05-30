@@ -6,7 +6,7 @@ public class PublicUserDTO
 {
     public Guid Id { get; }
     public string Login { get; }
-    
+
     public PublicUserDTO(User user)
     {
         Id = user.Id;

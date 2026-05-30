@@ -11,9 +11,9 @@ public class PendingRegistration
     public DateTimeOffset ExpiresAt { get; }
 
     public PendingRegistration(
-        Guid id, 
+        Guid id,
         string login,
-        string email, 
+        string email,
         string passwordhash,
          DateTimeOffset expiresat
     )

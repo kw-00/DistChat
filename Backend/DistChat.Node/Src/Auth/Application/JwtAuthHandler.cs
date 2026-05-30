@@ -12,7 +12,7 @@ public class JwtAuthHandler<TOptions>(
     ILoggerFactory logger,
     UrlEncoder encoder
 )
-    : AuthenticationHandler<TOptions>(options, logger, encoder) 
+    : AuthenticationHandler<TOptions>(options, logger, encoder)
     where TOptions : AuthenticationSchemeOptions, new()
 {
 

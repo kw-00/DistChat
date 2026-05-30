@@ -9,10 +9,10 @@ public class RealtimeHub(
 {
 
     public async Task<object> Execute(
-        string groupKey, 
-        string commandKey, 
+        string groupKey,
+        string commandKey,
         params object[] args
-    ) 
+    )
     {
         var commandEnvelope = new CommandInvocation(args, Context.ConnectionId);
         return await dispatcher.ExecuteAsync(groupKey, commandKey, commandEnvelope);

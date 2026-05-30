@@ -10,14 +10,14 @@ public class PartitionedAccessor<TPartitionKey, TValue>
 
 
     public PartitionedAccessor(
-        int partitionCount, 
-        Func<TValue> factory, 
+        int partitionCount,
+        Func<TValue> factory,
         Func<TPartitionKey, object>? keySelector = null
     )
     {
         _partitionCount = partitionCount;
         _values = new TValue[partitionCount];
-        for (var i = 0; i < partitionCount; i++) 
+        for (var i = 0; i < partitionCount; i++)
             _values[i] = factory();
 
         _keySelector = keySelector ?? DefaultKeySelector;

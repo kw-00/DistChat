@@ -21,7 +21,7 @@ public class CommandDispatcher
          string groupKey, string commandKey, CommandInvocation invocation
     )
     {
-        var group = _commandGroups.GetValueOrDefault(groupKey) 
+        var group = _commandGroups.GetValueOrDefault(groupKey)
             ?? throw new KeyNotFoundException(
                 $"Command group \"{groupKey}\" is not registered in dispatcher."
             );

@@ -6,10 +6,10 @@ public class ChatSynchronization(
 )
 {
 
-    public Task WaitRoomAsync(Guid roomId) 
+    public Task WaitRoomAsync(Guid roomId)
         => GetRoomSemaphore(roomId).WaitAsync();
 
-    public Task WaitConnectionAsync(string connectionId) 
+    public Task WaitConnectionAsync(string connectionId)
         => GetConnectionSemaphore(connectionId).WaitAsync();
 
     public async Task WaitRoomAndConnectionAsync(Guid roomId, string connectionId)
@@ -18,10 +18,10 @@ public class ChatSynchronization(
         await GetConnectionSemaphore(connectionId).WaitAsync();
     }
 
-    public void ReleaseRoom(Guid roomId) 
+    public void ReleaseRoom(Guid roomId)
         => GetRoomSemaphore(roomId).Release();
 
-    public void ReleaseConnection(string connectionId) 
+    public void ReleaseConnection(string connectionId)
         => GetConnectionSemaphore(connectionId).Release();
 
     public void ReleaseRoomAndConnection(Guid roomId, string connectionId)
@@ -30,8 +30,8 @@ public class ChatSynchronization(
         GetConnectionSemaphore(connectionId).Release();
     }
 
-    private SemaphoreSlim GetRoomSemaphore(Guid roomId) 
+    private SemaphoreSlim GetRoomSemaphore(Guid roomId)
         => roomSemaphores.Get(roomId);
-    private SemaphoreSlim GetConnectionSemaphore(string connectionId) 
+    private SemaphoreSlim GetConnectionSemaphore(string connectionId)
         => connectionSemaphores.Get(connectionId);
 }

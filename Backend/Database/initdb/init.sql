@@ -139,7 +139,7 @@ DOMAIN: Auth
 CREATE TABLE IF NOT EXISTS refreshTokens (
     id UUID DEFAULT uuidv7(),
     userId UUID NOT NULL,
-    isUsed BOOLEAN NOT NULL,
+    isUsed BOOLEAN NOT NULL DEFAULT FALSE,
     expiresAt TIMESTAMPTZ NOT NULL
 );
 ALTER TABLE refreshTokens ADD CONSTRAINT pk_refreshTokens PRIMARY KEY (id);

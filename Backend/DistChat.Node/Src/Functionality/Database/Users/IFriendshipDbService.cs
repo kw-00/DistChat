@@ -11,7 +11,7 @@ public interface IFriendshipDbService
     Task<IReadOnlyList<PublicUserDTO>> GetFriendsAsync(Guid userId);
 
     Task<IReadOnlyList<PublicUserDTO>> GetIncomingFriendRequestsAsync(Guid userId);
-    
+
     Task DeclineFriendRequestAsync(Guid decliningUserId, Guid requestingUserId);
 
     Task UnfriendAsync(Guid initiatingUserId, Guid friendUserId);

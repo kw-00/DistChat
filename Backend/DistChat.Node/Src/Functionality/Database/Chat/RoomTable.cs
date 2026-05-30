@@ -27,5 +27,5 @@ public static class RoomTable
     {
         public const string Group = "group";
         public const string Dm = "dm";
-    }    
+    }
 }

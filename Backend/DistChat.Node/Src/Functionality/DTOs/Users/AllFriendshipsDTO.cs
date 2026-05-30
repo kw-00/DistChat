@@ -6,7 +6,7 @@ public class AllFriendshipsDTO
     public IReadOnlyList<PublicUserDTO> RequestingFriendship { get; }
 
     public AllFriendshipsDTO(
-        IEnumerable<PublicUserDTO> friends, 
+        IEnumerable<PublicUserDTO> friends,
         IEnumerable<PublicUserDTO> requestingFriendship
     )
     {

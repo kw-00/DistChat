@@ -39,8 +39,8 @@ public class ChatRealtimeHandler
             await operations.GetRoomsAsync(invocation.ConnectionId);
         });
 
-        group.RegisterCommand("addUser", async (invocation) => 
-        { 
+        group.RegisterCommand("addUser", async (invocation) =>
+        {
             var roomId = ParseRoomId(invocation.Args[0]);
             var userToAddIdValid = Guid.TryParse(
                 invocation.Args[1].ToString(), out var userToAddId
@@ -55,8 +55,8 @@ public class ChatRealtimeHandler
             );
         });
 
-        group.RegisterCommand("removeUser", async (invocation) => 
-        { 
+        group.RegisterCommand("removeUser", async (invocation) =>
+        {
             var roomId = ParseRoomId(invocation.Args[0]);
             var userToRemoveIdValid = Guid.TryParse(
                 invocation.Args[1].ToString(), out var userToRemoveId
@@ -65,20 +65,20 @@ public class ChatRealtimeHandler
                 throw new InvalidCommandInvocationException(
                     "UserToRemoveId is not a valid Guid."
                 );
-                
+
             await operations.RemoveUserAsync(
                 invocation.ConnectionId, roomId, userToRemoveId
             );
         });
 
-        group.RegisterCommand("deleteRoom", async (invocation) => 
-        { 
+        group.RegisterCommand("deleteRoom", async (invocation) =>
+        {
             var roomId = ParseRoomId(invocation.Args[0]);
             await operations.DeleteRoomAsync(invocation.ConnectionId, roomId);
         });
 
-        group.RegisterCommand("leaveRoom", async (invocation) => 
-        { 
+        group.RegisterCommand("leaveRoom", async (invocation) =>
+        {
             var roomId = ParseRoomId(invocation.Args[0]);
             await operations.LeaveRoomAsync(invocation.ConnectionId, roomId);
         });
@@ -103,10 +103,10 @@ public class ChatRealtimeHandler
             var roomIdArg = invocation.Args[0]?.ToString();
 
             Guid? roomId =
-                roomIdArg is null 
-                ? null 
-                : Guid.TryParse(roomIdArg, out var parsed) 
-                    ? parsed 
+                roomIdArg is null
+                ? null
+                : Guid.TryParse(roomIdArg, out var parsed)
+                    ? parsed
                     : throw new InvalidCommandInvocationException(
                         "Room ID is not a valid Guid."
                     );

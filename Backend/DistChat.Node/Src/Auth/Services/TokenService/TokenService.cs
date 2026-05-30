@@ -76,7 +76,7 @@ public class TokenService : ITokenService
     public async Task<TokenPair> RefreshAsync(string refreshToken)
     {
         var tokenFormatValid = Guid.TryParse(refreshToken, out var tokenId);
-        if (!tokenFormatValid) 
+        if (!tokenFormatValid)
             throw new InvalidRefreshTokenException("Refresh token is not a valid Guid.");
 
         var rotationResult = await _authDbService.RotateRefreshTokenAsync(tokenId);
@@ -97,7 +97,7 @@ public class TokenService : ITokenService
         {
             var newRefreshTokenModel = successResult.NewRefreshToken;
             return new TokenPair(
-                CreateAccessToken(newRefreshTokenModel.UserId), 
+                CreateAccessToken(newRefreshTokenModel.UserId),
                 newRefreshTokenModel.Id.ToString()
             );
         }
@@ -108,7 +108,7 @@ public class TokenService : ITokenService
     {
         var refreshToken = await _authDbService.CreateRefreshTokenAsync(userId);
         return new TokenPair(CreateAccessToken(userId), refreshToken.Id.ToString());
-    } 
+    }
 
     private string CreateAccessToken(Guid userId)
     {

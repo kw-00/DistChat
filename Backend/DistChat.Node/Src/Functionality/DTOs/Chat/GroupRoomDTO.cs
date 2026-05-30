@@ -8,7 +8,7 @@ public class GroupRoomDTO : RoomDTO
     public override string Type => RoomTable.Type.Dm;
 
     public GroupRoomDTO(Guid id, string name)
-        : base (id)
+        : base(id)
     {
         Name = name;
     }

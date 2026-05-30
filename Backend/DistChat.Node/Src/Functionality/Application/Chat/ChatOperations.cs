@@ -30,7 +30,7 @@ public class ChatOperations(
 {
     public async Task CreateRoomAsync(
         string connectionId, IEnumerable<Guid> memberIds, string name
-    ) 
+    )
     {
         var roomId = Guid.NewGuid();
         await synchronization.WaitRoomAsync(roomId);
@@ -53,22 +53,22 @@ public class ChatOperations(
         }
     }
 
-    public async Task<IReadOnlyList<Room>> GetRoomsAsync(string connectionId) 
+    public async Task<IReadOnlyList<RoomDTO>> GetRoomsAsync(string connectionId)
     {
         var userId = connectionTracker.GetUserId(connectionId);
-        return await roomDbService.GetRoomsAsync(userId);  
+        return await roomDbService.GetRoomsAsync(userId);
     }
 
     public async Task AddUserAsync(
         string connectionId, Guid roomId, Guid userToAddId
-    ) 
+    )
     {
         await synchronization.WaitRoomAsync(roomId);
         try
         {
             var userId = connectionTracker.GetUserId(connectionId);
             await roomDbService.AddUserAsync(userId, roomId, userToAddId);
-            var room = await roomDbService.GetRoomAsync(roomId);
+            var room = await roomDbService.GetGroupRoomAsync(roomId);
             var addedUser = await userDbService.GetAsync(userToAddId)
                 ?? throw new UserNotFoundException(
                     $"User with ID of \"{userToAddId}\" disappeared from database."
@@ -122,13 +122,14 @@ public class ChatOperations(
             {
                 await removedFromRoom.PublishAsync(memberId, roomId);
                 await UnsubscribeFromRoomAsync(roomId, memberId);
-            };
+            }
+            ;
             await Task.WhenAll(
                 roomMembers.Select(
                     (member) => ProcessMemberAsync(member.Id)
                 )
             );
-            
+
         }
         finally
         {
@@ -136,7 +137,7 @@ public class ChatOperations(
         }
     }
 
-    public async Task LeaveRoomAsync(string connectionId, Guid roomId) 
+    public async Task LeaveRoomAsync(string connectionId, Guid roomId)
     {
         await synchronization.WaitRoomAndConnectionAsync(roomId, connectionId);
         try
@@ -148,29 +149,30 @@ public class ChatOperations(
             {
                 await removedFromRoom.PublishAsync(memberId, roomId);
                 await UnsubscribeFromRoomAsync(roomId, memberId);
-            };
+            }
+            ;
             await Task.WhenAll(roomMembers.Select(
                 (member) => ProcessMemberAsync(member.Id)
             ));
-            
+
         }
         finally
         {
             synchronization.ReleaseRoomAndConnection(roomId, connectionId);
-        }   
+        }
     }
 
 
 
     public async Task<IReadOnlyList<Message>> FocusRoomAsync(
         string connectionId, Guid? roomId
-    ) 
+    )
     {
         await synchronization.WaitConnectionAsync(connectionId);
-        
+
         IReadOnlyList<Message> messages;
         try
-        {  
+        {
             if (roomId is null)
             {
                 var focusedRoomId = roomFocusTracker.TryGetRoomFocus(connectionId);
@@ -183,20 +185,20 @@ public class ChatOperations(
                         connectionId
                     );
                 }
-                messages = []; 
+                messages = [];
             }
             else
             {
                 var userId = connectionTracker.GetUserId(connectionId);
                 if (!await roomDbService.IsUserInRoomAsync(userId, roomId.Value))
                     throw new NotInRoomException(userId, roomId.Value);
-                    
+
                 await messageReceived.StartConsumptionAsync(connectionId, roomId.Value);
                 roomFocusTracker.SetRoomFocus(connectionId, roomId.Value);
                 messages = await messageDbService.GetMessagesAsync(
-                    userId, 
-                    roomId.Value, 
-                    options.Value.MessageBatchSize, 
+                    userId,
+                    roomId.Value,
+                    options.Value.MessageBatchSize,
                     newestFirst: true
                 );
                 messages = [.. messages.Reverse()];
@@ -220,7 +222,7 @@ public class ChatOperations(
 
     public async Task<IReadOnlyList<Message>> GoOlderAsync(
         string connectionId, Guid oldestMessageOnClientId
-    ) 
+    )
     {
         await synchronization.WaitConnectionAsync(connectionId);
 
@@ -229,10 +231,10 @@ public class ChatOperations(
             var userId = connectionTracker.GetUserId(connectionId);
             var roomId = roomFocusTracker.GetRoomFocus(connectionId);
             var messages = await messageDbService.GetMessagesAsync(
-                userId, 
-                roomId, 
-                50, 
-                before: oldestMessageOnClientId, 
+                userId,
+                roomId,
+                50,
+                before: oldestMessageOnClientId,
                 newestFirst: true
             );
             messages = [.. messages.Reverse()];
@@ -247,7 +249,7 @@ public class ChatOperations(
 
     public async Task<IReadOnlyList<Message>> GoNewerAsync(
         string connectionId, Guid newestMessageOnClientId
-    ) 
+    )
     {
         await synchronization.WaitConnectionAsync(connectionId);
         try
@@ -255,10 +257,10 @@ public class ChatOperations(
             var userId = connectionTracker.GetUserId(connectionId);
             var roomId = roomFocusTracker.GetRoomFocus(connectionId);
             var messages = await messageDbService.GetMessagesAsync(
-                userId, 
-                roomId, 
-                50, 
-                after: newestMessageOnClientId, 
+                userId,
+                roomId,
+                50,
+                after: newestMessageOnClientId,
                 newestFirst: false
             );
             if (messages.Count < options.Value.MessageBatchSize)
@@ -266,8 +268,8 @@ public class ChatOperations(
                 await messageReceived.StartConsumptionAsync(connectionId, roomId);
                 var missedMessages = await messageDbService.GetMessagesAsync(
                     userId,
-                    messages[messages.Count - 1].Id, 
-                    options.Value.MessageBatchSize, 
+                    messages[messages.Count - 1].Id,
+                    options.Value.MessageBatchSize,
                     newestFirst: false
                 );
                 messages = [.. messages, .. missedMessages];
@@ -301,11 +303,11 @@ public class ChatOperations(
         }
     }
 
-    public async Task HandleDisconnectedAsync(string connectionId, Guid userId) 
+    public async Task HandleDisconnectedAsync(string connectionId, Guid userId)
     {
         await synchronization.WaitConnectionAsync(connectionId);
         try
-        { 
+        {
             var rooms = await roomDbService.GetRoomsAsync(userId);
             List<Task> tasks = [];
             tasks.Add(addedToRoom.StopConsumptionAsync(connectionId, userId));
@@ -340,7 +342,7 @@ public class ChatOperations(
         async Task UnsubscribeFromFeedAsync()
         {
             var focusedRoomId = roomFocusTracker.TryGetRoomFocus(connectionId);
-            if (focusedRoomId is not null) 
+            if (focusedRoomId is not null)
                 await messageReceived.StopConsumptionAsync(
                     connectionId, focusedRoomId.Value
                 );
@@ -349,7 +351,7 @@ public class ChatOperations(
         await Task.WhenAll(tasks);
     }
 
-    private async Task SubscribeToRoomAsync(Guid roomId, Guid userId) 
+    private async Task SubscribeToRoomAsync(Guid roomId, Guid userId)
     {
         var userConnections = connectionTracker.GetConnections(userId);
         await Task.WhenAll(
@@ -359,7 +361,7 @@ public class ChatOperations(
         );
     }
 
-    private async Task SubscribeToRoomAsync(Guid roomId, string connectionId) 
+    private async Task SubscribeToRoomAsync(Guid roomId, string connectionId)
     {
         await Task.WhenAll(
             userLeft.StartConsumptionAsync(connectionId, roomId),

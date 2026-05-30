@@ -12,7 +12,7 @@ public class TokenCookieHandler : ITokenCookieHandler
         context.Request.Cookies.TryGetValue(AccessTokenKey, out var accessToken);
         context.Request.Cookies.TryGetValue(RefreshTokenKey, out var refreshToken);
 
-        if (accessToken is null || refreshToken is null) 
+        if (accessToken is null || refreshToken is null)
             return null;
 
         return new TokenPair(accessToken, refreshToken);

@@ -7,7 +7,7 @@ public class SelfUserDTO
     public Guid Id { get; }
     public string Login { get; }
     public string Email { get; }
-    
+
     public SelfUserDTO(User user)
     {
         Id = user.Id;
