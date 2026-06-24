@@ -1,0 +1,30 @@
+
+* {
+    box-sizing: border-box;
+    color: rgb(202, 202, 202);
+}
+
+html, body, #app {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+}
+
+button {
+    all: unset;
+    user-select: none;
+}
+
+dialog {
+    all: unset;
+    position: fixed;
+}
+
+dialog:not([open]) {
+    display: none;
+}
+
+input {
+    all: unset;
+}

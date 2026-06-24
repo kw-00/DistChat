@@ -1,0 +1,16 @@
+input {
+  --base-box-shadow:
+    inset 0 0 0.1rem 0 hsl(0 0% 100%),
+    inset 0 0 0.5rem 0 hsl(100 0% 0%);
+
+  padding: 0.3rem 0.5rem;
+  background: hsl(100 80% 10%);
+  box-shadow: var(--base-box-shadow);
+  border-radius: 0.2rem;
+}
+
+input:focus {
+  box-shadow:
+    var(--base-box-shadow),
+    0 0 0 0.05rem hsl(0 0% 100% / 50%);
+}

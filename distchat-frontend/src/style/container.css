@@ -1,0 +1,13 @@
+.page {
+  background: hsl(0 0% 7%);
+}
+
+.panel {
+  background: hsl(0 0% 8%);
+  box-shadow: inset hsl(0 0% 70%) 0 0 0 0.1rem;
+}
+
+.panel-emphasized {
+  background: hsl(0 0% 5%);
+  box-shadow: inset hsl(0 0% 70%) 0 0 0 0.1rem;
+}

@@ -1,0 +1,26 @@
+button {
+  padding: 0.5rem 1.5rem;
+  text-align: center;
+  vertical-align: center;
+}
+
+button:hover {
+  filter: brightness(105%);
+}
+
+
+button:active {
+  filter: brightness(110%);
+}
+
+button {
+  background: hsl(250 30% 20%);
+}
+
+button.primary {
+  background: hsl(120 100% 18%);
+}
+
+button.danger {
+  background: hsl(0 100% 20%);
+}

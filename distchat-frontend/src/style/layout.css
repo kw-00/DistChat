@@ -1,0 +1,125 @@
+.hp {
+  height: 100svh;
+}
+
+.wp {
+  width: 100svw;
+}
+
+.vs {
+  display: flex;
+  flex-direction: column;
+}
+
+.hs {
+  display: flex;
+  flex-direction: row;
+}
+
+.jb {
+  justify-content: space-between;
+}
+
+.ja {
+  justify-content: space-around;
+}
+
+.je {
+  justify-content: space-evenly;
+}
+
+.jc {
+  justify-content: center;
+}
+
+.ac {
+  align-items: center;
+}
+
+.as {
+  align-items: start;
+}
+
+ae {
+  align-items: end;
+}
+
+.grow {
+  flex-grow: 1;
+}
+
+#root {
+  --padding-sm: 0.5rem;
+  --padding-md: 1rem;
+  --padding-lg: 1.5rem;
+}
+
+.gap-sm {
+  gap: 0.5rem;
+}
+
+.gap-md {
+  gap: 1rem;
+}
+
+.gap-lg {
+  gap: 1.5rem;
+}
+
+.p-sm {
+  padding: var(--padding-sm);
+}
+
+.p-md {
+  padding: var(--padding-md);
+}
+
+.p-lg {
+  padding: var(--padding-lg);
+}
+
+.px-sm {
+  padding-left: var(--padding-sm);
+  padding-right: var(--padding-sm);
+}
+
+.px-md {
+  padding-left: var(--padding-md);
+  padding-right: var(--padding-md);
+}
+
+.px-lg {
+  padding-left: var(--padding-lg);
+  padding-right: var(--padding-lg);
+}
+
+.py-sm {
+  padding-top: var(--padding-sm);
+  padding-bottom: var(--padding-sm);
+}
+
+.py-md {
+  padding-top: var(--padding-md);
+  padding-bottom: var(--padding-md);
+}
+
+.py-lg {
+  padding-top: var(--padding-lg);
+  padding-bottom: var(--padding-lg);
+}
+
+.scrolly {
+  overflow-y: scroll;
+}
+
+.scrollify {
+  overflow-y: auto;
+}
+
+.csize {
+  contain: size;
+}
+
+.clayout {
+  contain: layout;
+}
